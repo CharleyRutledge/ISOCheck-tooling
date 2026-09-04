@@ -1,8 +1,38 @@
 # ISOCheck tooling
 
-Local ISO compliance **artefact audit** (no API key) plus the ISOCheck browser UI.
+Three ways to check a project against the catalogued ISO/IEC standards
+(see `iso-standards.mjs` for the full list of 20):
 
-## Projects
+| Tool | What it does | Needs a key? |
+|------|--------------|--------------|
+| **`iso-agent.mjs`** | Point at **any** app: Claude profiles it, judges each control by reading real file content, writes the missing docs tailored to that app, and re-verifies in a loop. | Yes (Anthropic) |
+| `iso-local-audit.mjs` | Deterministic artefact audit — checks expected files exist. Fast, offline. | No |
+| `iso-compliance-checker.html` | Browser UI: upload a folder, run an LLM audit on file snapshots. | Yes |
+
+## Agent — assess any app and fix the gaps
+
+```bash
+npm install                      # once, to install the Anthropic SDK
+export ANTHROPIC_API_KEY=sk-...  # or: ant auth login
+
+# Full auto: assess → write missing docs → re-verify (up to 3 passes)
+node iso-agent.mjs /path/to/any/app
+
+# Just report the gaps, write nothing:
+node iso-agent.mjs /path/to/any/app --report-only
+
+# Preview the evidence sent to Claude, no API calls / no key:
+node iso-agent.mjs /path/to/any/app --scan-only
+```
+
+Options: `--max-passes=N` (default 3), `--model=ID` (default `claude-opus-5`),
+`--standards=27001,42001` (assess only matching standards).
+
+Outputs `iso-compliance-report.json` and `ISO_COMPLIANCE_REPORT.md` in the target
+project, and (unless `--report-only`) the generated documentation itself.
+Exit code `0` means fully compliant.
+
+## Projects (deterministic audit)
 
 The loop always audits **this repo** (`isocheck` profile). Additional projects
 are optional and configured per machine — nothing is hardcoded, and a project
