@@ -4,15 +4,24 @@ Local ISO compliance **artefact audit** (no API key) plus the ISOCheck browser U
 
 ## Projects
 
-| Path | Profile |
-|------|---------|
-| This repo (`isocheck`) | `isocheck` |
-| `C:\Users\amkei\Repos\eu-pay` | `eu-pay` |
+The loop always audits **this repo** (`isocheck` profile). Additional projects
+are optional and configured per machine — nothing is hardcoded, and a project
+that isn't present is skipped rather than failing the run.
+
+Add extra targets via the `ISO_AUDIT_TARGETS` env var or CLI args, each as
+`path=profile` (profile defaults to `isocheck` if omitted):
+
+```cmd
+set ISO_AUDIT_TARGETS=C:\Users\me\Repos\eu-pay=eu-pay
+node iso-compliance-loop.mjs
+
+rem or as arguments
+node iso-compliance-loop.mjs C:\Users\me\Repos\eu-pay=eu-pay
+```
 
 ## Run until fully compliant
 
 ```cmd
-cd C:\Users\amkei\Repos\isocheck
 node iso-compliance-loop.mjs
 ```
 
