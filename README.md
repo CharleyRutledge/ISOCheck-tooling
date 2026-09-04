@@ -54,6 +54,13 @@ Tools: `list_standards`, `scan_project` and `audit_project` (no key),
 `assess_project` (gap report) and `remediate_project` (writes docs) — the last
 two need `ANTHROPIC_API_KEY` in the server's environment.
 
+**Security:** path arguments are confined to `ISO_MCP_ALLOWED_ROOTS` (path- or
+comma-separated); if unset, only the server's working directory is allowed. This
+stops a client — or a prompt-injected AI driving one — from scanning `~/.ssh`,
+`/etc`, or anywhere else on the host. Secret files (`.env`, private keys,
+`.netrc`, keystores, credential stores like `.ssh`/`.aws`) are also excluded
+from the scan entirely, so they are never sent to the model or returned.
+
 Example client config (Claude Desktop / Cursor `mcpServers`):
 
 ```json
@@ -62,7 +69,10 @@ Example client config (Claude Desktop / Cursor `mcpServers`):
     "isocheck": {
       "command": "node",
       "args": ["/absolute/path/to/iso-mcp-server.mjs"],
-      "env": { "ANTHROPIC_API_KEY": "sk-ant-..." }
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-...",
+        "ISO_MCP_ALLOWED_ROOTS": "/path/to/your/projects"
+      }
     }
   }
 }

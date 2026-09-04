@@ -48,8 +48,27 @@ function selectStandards(filter) {
   return picked;
 }
 
+// Confine every path argument to an allowlist so a client (or a prompt-injected
+// AI driving one) cannot point the server at ~/.ssh, /etc, or anywhere else on
+// the host. Allowed roots come from ISO_MCP_ALLOWED_ROOTS (path-separator or
+// comma separated); if unset, the server's own working directory is the only
+// allowed root — a safe default that an operator widens deliberately.
+function allowedRoots() {
+  const raw = process.env.ISO_MCP_ALLOWED_ROOTS;
+  const list = raw ? raw.split(/[:;,]/).map((s) => s.trim()).filter(Boolean) : [process.cwd()];
+  return list.map((r) => path.resolve(r));
+}
+
 function requireDir(p) {
   const root = path.resolve(p);
+  const roots = allowedRoots();
+  const inside = roots.some((base) => root === base || root.startsWith(base + path.sep));
+  if (!inside) {
+    throw new Error(
+      `Path is outside the allowed roots (${roots.join(', ')}). ` +
+        `Set ISO_MCP_ALLOWED_ROOTS to permit it.`
+    );
+  }
   if (!fs.existsSync(root)) throw new Error(`Path not found: ${root}`);
   if (!fs.statSync(root).isDirectory()) throw new Error(`Not a directory: ${root}`);
   return root;

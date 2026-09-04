@@ -18,6 +18,9 @@ function tmpProject() {
 const parse = (res) => JSON.parse(res.content[0].text);
 
 async function main() {
+  // Tmp projects live under os.tmpdir(); allow it so path confinement doesn't
+  // reject them (see tests/security.test.mjs for the confinement itself).
+  process.env.ISO_MCP_ALLOWED_ROOTS = os.tmpdir();
   const server = createServer();
   const [clientT, serverT] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
