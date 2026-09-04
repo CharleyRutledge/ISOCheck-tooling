@@ -40,6 +40,34 @@ Outputs `iso-compliance-report.json` and `ISO_COMPLIANCE_REPORT.md` in the targe
 project, and (unless `--report-only`) the generated documentation itself.
 Exit code `0` means every catalogued control has documentation (self-assessment, not certification).
 
+## MCP server — use it from Claude Desktop / Cursor / VS Code
+
+Expose the assessment and doc-generation as [Model Context Protocol](https://modelcontextprotocol.io)
+tools, so any MCP client can run them from inside the editor.
+
+```bash
+npm install
+node iso-mcp-server.mjs   # stdio server
+```
+
+Tools: `list_standards`, `scan_project` and `audit_project` (no key),
+`assess_project` (gap report) and `remediate_project` (writes docs) — the last
+two need `ANTHROPIC_API_KEY` in the server's environment.
+
+Example client config (Claude Desktop / Cursor `mcpServers`):
+
+```json
+{
+  "mcpServers": {
+    "isocheck": {
+      "command": "node",
+      "args": ["/absolute/path/to/iso-mcp-server.mjs"],
+      "env": { "ANTHROPIC_API_KEY": "sk-ant-..." }
+    }
+  }
+}
+```
+
 ## Projects (deterministic audit)
 
 The loop always audits **this repo** (`isocheck` profile). Additional projects
