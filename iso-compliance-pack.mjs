@@ -57,7 +57,7 @@ export function applyCompliancePack(root, profile = 'isocheck') {
       : 'ISOCheck analyses uploaded project files against selected ISO/IEC standards using optional LLM APIs.';
 
   const files = {
-    'README.md': `# ${name}\n\n${purpose}\n\nSee \`docs/\` for requirements, architecture, testing, security, and operations.\n`,
+    'README.md': `# ${name}\n\n${purpose}\n\nSee \`docs/\` for requirements, architecture, testing, security, and operations.\n\n> Note: the \`docs/\` compliance artefacts are a self-assessment starting point, not an audit or ISO certification. Review and own them before relying on them.\n`,
     'CHANGELOG.md': `# Changelog\n\n## [1.0.0] - 2026-05-21\n\n### Added\n- Compliance documentation pack and local audit tooling.\n`,
     'REQUIREMENTS.md': `# Requirements\n\n## Functional\n\n- Core product behaviour documented in \`docs/SRS.md\`.\n\n## Non-functional\n\n- Security, quality, and privacy controls in \`docs/security/\` and \`docs/quality/\`.\n`,
     'ARCHITECTURE.md': `# Architecture\n\nSee \`docs/ADD.md\` for components, interfaces, and deployment view.\n`,

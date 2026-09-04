@@ -3,6 +3,14 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/smoke.test.js"
+    "test": "node tests/smoke.test.js && node tests/agent.test.mjs && node tests/agent-e2e.test.mjs && node tests/agent-edge.test.mjs && node tests/agent-negative.test.mjs && node tests/mcp.test.mjs && node tests/security.test.mjs",
+    "iso:agent": "node iso-agent.mjs",
+    "iso:audit": "node iso-local-audit.mjs .",
+    "iso:mcp": "node iso-mcp-server.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.5.4"
   }
 }
