@@ -1,5 +1,13 @@
 # ISOCheck tooling
 
+> ⚠️ **Not certification.** These tools produce an automated **self-assessment of
+> documentation coverage** against ISO/IEC checklists. They are not an audit and do
+> not constitute or imply ISO certification — that can only be issued by an
+> accredited certification body following a formal external audit. Generated docs
+> are a starting point to review, make accurate, and own; several catalogued
+> standards (e.g. 25010, 29119, 5055) are guidance/measurement standards you
+> conform to, not schemes you get certified against at all.
+
 Three ways to check a project against the catalogued ISO/IEC standards
 (see `iso-standards.mjs` for the full list of 20):
 
@@ -30,7 +38,7 @@ Options: `--max-passes=N` (default 3), `--model=ID` (default `claude-opus-5`),
 
 Outputs `iso-compliance-report.json` and `ISO_COMPLIANCE_REPORT.md` in the target
 project, and (unless `--report-only`) the generated documentation itself.
-Exit code `0` means fully compliant.
+Exit code `0` means every catalogued control has documentation (self-assessment, not certification).
 
 ## Projects (deterministic audit)
 
@@ -49,7 +57,7 @@ rem or as arguments
 node iso-compliance-loop.mjs C:\Users\me\Repos\eu-pay=eu-pay
 ```
 
-## Run until fully compliant
+## Run until all documentation checks pass
 
 ```cmd
 node iso-compliance-loop.mjs

@@ -392,6 +392,13 @@ function writeDoc(root, rel, content) {
 // ---------------------------------------------------------------------------
 // Reporting
 // ---------------------------------------------------------------------------
+const DISCLAIMER =
+  'This is an automated self-assessment of documentation coverage against ' +
+  'ISO/IEC checklists. It is NOT an audit and does NOT constitute or imply ISO ' +
+  'certification — certification can only be issued by an accredited certification ' +
+  'body following a formal external audit. Generated documentation is a starting ' +
+  'point that must be reviewed, made accurate, and owned by the organisation.';
+
 function summarize(assessments) {
   let compliant = 0;
   let partial = 0;
@@ -409,15 +416,17 @@ function summarize(assessments) {
 }
 
 function writeReports(root, assessments, profile, summary) {
-  const json = { root, at: new Date().toISOString(), model: MODEL, profile, summary, assessments };
+  const json = { root, at: new Date().toISOString(), model: MODEL, disclaimer: DISCLAIMER, profile, summary, assessments };
   fs.writeFileSync(path.join(root, 'iso-compliance-report.json'), JSON.stringify(json, null, 2));
 
   const lines = [
-    `# ISO compliance report`,
+    `# ISO documentation self-assessment`,
+    ``,
+    `> ⚠️ ${DISCLAIMER}`,
     ``,
     `**Project:** ${profile.name} — ${profile.purpose}`,
     `**Assessed:** ${json.at}`,
-    `**Overall:** ${summary.score}/100 (${summary.compliant} compliant, ${summary.partial} partial, ${summary.missing} missing of ${summary.total})`,
+    `**Documentation coverage:** ${summary.score}/100 (${summary.compliant} covered, ${summary.partial} partial, ${summary.missing} missing of ${summary.total} controls)`,
     ``,
   ];
   for (const a of assessments) {
@@ -517,10 +526,11 @@ async function main() {
   writeReports(ROOT, assessments, profile, summary);
 
   console.log(`\n=====================================`);
-  console.log(`Overall: ${summary.score}/100 — ${summary.compliant} compliant, ${summary.partial} partial, ${summary.missing} missing`);
+  console.log(`Documentation coverage: ${summary.score}/100 — ${summary.compliant} covered, ${summary.partial} partial, ${summary.missing} missing`);
   console.log(`Reports: iso-compliance-report.json, ISO_COMPLIANCE_REPORT.md`);
   if (summary.fullyCompliant) {
-    console.log(`Result: fully compliant ✅`);
+    console.log(`Result: all catalogued controls have documentation ✅`);
+    console.log(`Note: self-assessment only — not an audit or ISO certification.`);
     process.exit(0);
   } else {
     console.log(`Result: ${REPORT_ONLY ? 'report only — no docs written' : 'gaps remain (raise --max-passes or review manually)'}`);

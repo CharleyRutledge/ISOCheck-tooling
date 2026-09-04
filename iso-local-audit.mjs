@@ -197,7 +197,7 @@ async function main() {
     'utf8'
   );
 
-  console.log(`\nISO local audit: ${root}`);
+  console.log(`\nISO local audit (documentation self-assessment): ${root}`);
   console.log(`Overall: ${overall}/100  pass=${totalPass} warn=${totalWarn} fail=${totalFail}`);
   for (const r of results.filter((x) => x.score < 100)) {
     console.log(`  ${r.score}/100  ${r.id}`);
@@ -205,10 +205,10 @@ async function main() {
   }
 
   if (overall < minScore || totalFail > 0 || totalWarn > 0) {
-    console.log(`\nNot fully compliant (need score >= ${minScore}, fail=0, warn=0). Run with --apply and re-audit.`);
+    console.log(`\nDocumentation gaps remain (need score >= ${minScore}, fail=0, warn=0). Run with --apply and re-audit.`);
     process.exit(1);
   }
-  console.log('\nFully compliant (all checks pass).');
+  console.log('\nAll documentation checks pass (self-assessment only — not an audit or ISO certification).');
   process.exit(0);
 }
 
