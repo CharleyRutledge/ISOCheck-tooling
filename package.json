@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/smoke.test.js && node tests/agent.test.mjs && node tests/agent-e2e.test.mjs && node tests/agent-edge.test.mjs",
+    "test": "node tests/smoke.test.js && node tests/agent.test.mjs && node tests/agent-e2e.test.mjs && node tests/agent-edge.test.mjs && node tests/agent-negative.test.mjs",
     "iso:agent": "node iso-agent.mjs",
     "iso:audit": "node iso-local-audit.mjs ."
   },

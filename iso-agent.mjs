@@ -314,6 +314,16 @@ const REMEDIATE_TOOL = {
 // ---------------------------------------------------------------------------
 // Steps
 // ---------------------------------------------------------------------------
+// Defensive validation of model output: strict tool schemas make these unlikely,
+// but a clear error beats a cryptic TypeError deep in the loop if a model or a
+// future change returns the wrong shape.
+function expectArray(value, label) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Model returned a malformed ${label} (expected an array, got ${typeof value}).`);
+  }
+  return value;
+}
+
 async function profileApp(evidence) {
   return toolCall({
     instruction:
@@ -388,6 +398,12 @@ function safeJoin(root, rel) {
 }
 
 function writeDoc(root, rel, content) {
+  if (typeof rel !== 'string' || !rel.trim()) {
+    throw new Error(`Refusing to write a doc with an invalid path: ${JSON.stringify(rel)}`);
+  }
+  if (typeof content !== 'string') {
+    throw new Error(`Refusing to write ${rel}: content is ${typeof content}, expected a string.`);
+  }
   const dest = safeJoin(root, rel);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const existed = fs.existsSync(dest);
@@ -467,6 +483,7 @@ export async function runAgent({
   log = console.log,
 } = {}) {
   if (!fs.existsSync(root)) throw new Error(`Project root not found: ${root}`);
+  if (!fs.statSync(root).isDirectory()) throw new Error(`Project root is not a directory: ${root}`);
 
   const evidence0 = renderEvidence(scan(root));
   log(`Profiling app…`);
@@ -479,7 +496,8 @@ export async function runAgent({
     const passEvidence = renderEvidence(scan(root)); // re-scan so new docs count
     assessments = [];
     for (const std of standards) {
-      const { controls } = await assessStandard(std, profile, passEvidence);
+      const res = await assessStandard(std, profile, passEvidence);
+      const controls = expectArray(res && res.controls, `assessment for ${std.id}`);
       assessments.push({ id: std.id, title: std.title, controls });
       const ok = controls.filter((c) => c.status === 'compliant').length;
       log(`  ${std.id}: ${ok}/${controls.length}`);
@@ -495,7 +513,8 @@ export async function runAgent({
         (c) => c.status !== 'compliant' && c.remediation && c.remediation.path
       );
       if (!gaps.length) continue;
-      const { files } = await remediateStandard(standards[i], profile, gaps, passEvidence);
+      const res = await remediateStandard(standards[i], profile, gaps, passEvidence);
+      const files = expectArray(res && res.files, `docs for ${standards[i].id}`);
       const results = files.map((f) => `${writeDoc(root, f.path, f.content)} ${f.path}`);
       log(`  ${standards[i].id}: ${results.join(', ')}`);
     }
