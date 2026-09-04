@@ -77,12 +77,13 @@ function walk(dir, rel = '', out = []) {
     const r = rel ? `${rel}/${name}` : name;
     let st;
     try {
-      st = fs.statSync(full);
+      st = fs.lstatSync(full); // lstat, not stat: never follow symlinks
     } catch {
       continue;
     }
+    if (st.isSymbolicLink()) continue; // avoid symlink loops / escaping the root
     if (st.isDirectory()) walk(full, r, out);
-    else out.push({ rel: r.replace(/\\/g, '/'), full, size: st.size });
+    else if (st.isFile()) out.push({ rel: r.replace(/\\/g, '/'), full, size: st.size });
   }
   return out;
 }
@@ -176,6 +177,11 @@ async function getClient() {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   client = new Anthropic();
   return client;
+}
+
+/** Inject a fake client for tests (bypasses the SDK import). */
+export function __setClientForTests(c) {
+  client = c;
 }
 
 /**
@@ -446,7 +452,62 @@ function writeReports(root, assessments, profile, summary) {
 }
 
 // ---------------------------------------------------------------------------
-// Main
+// Core loop (exported; no process.exit so it is unit-testable)
+// ---------------------------------------------------------------------------
+/**
+ * Profile → assess → remediate → re-verify loop against `root`.
+ * Returns { profile, assessments, summary }. Writes docs (unless reportOnly)
+ * and the two report artefacts. `log` defaults to console.log.
+ */
+export async function runAgent({
+  root,
+  standards = STANDARDS,
+  reportOnly = false,
+  maxPasses = 3,
+  log = console.log,
+} = {}) {
+  if (!fs.existsSync(root)) throw new Error(`Project root not found: ${root}`);
+
+  const evidence0 = renderEvidence(scan(root));
+  log(`Profiling app…`);
+  const profile = await profileApp(evidence0);
+  log(`  ${profile.name}: ${profile.purpose}`);
+
+  let assessments = [];
+  for (let pass = 1; pass <= maxPasses; pass++) {
+    log(`\n===== PASS ${pass}/${maxPasses} =====`);
+    const passEvidence = renderEvidence(scan(root)); // re-scan so new docs count
+    assessments = [];
+    for (const std of standards) {
+      const { controls } = await assessStandard(std, profile, passEvidence);
+      assessments.push({ id: std.id, title: std.title, controls });
+      const ok = controls.filter((c) => c.status === 'compliant').length;
+      log(`  ${std.id}: ${ok}/${controls.length}`);
+    }
+
+    const summary = summarize(assessments);
+    log(`  → coverage ${summary.score}/100 (${summary.partial} partial, ${summary.missing} missing)`);
+
+    if (summary.fullyCompliant || reportOnly || pass === maxPasses) break;
+
+    for (let i = 0; i < standards.length; i++) {
+      const gaps = assessments[i].controls.filter(
+        (c) => c.status !== 'compliant' && c.remediation && c.remediation.path
+      );
+      if (!gaps.length) continue;
+      const { files } = await remediateStandard(standards[i], profile, gaps, passEvidence);
+      const results = files.map((f) => `${writeDoc(root, f.path, f.content)} ${f.path}`);
+      log(`  ${standards[i].id}: ${results.join(', ')}`);
+    }
+  }
+
+  const summary = summarize(assessments);
+  writeReports(root, assessments, profile, summary);
+  return { profile, assessments, summary };
+}
+
+// ---------------------------------------------------------------------------
+// Main (CLI wrapper)
 // ---------------------------------------------------------------------------
 async function main() {
   if (!fs.existsSync(ROOT)) {
@@ -483,47 +544,13 @@ async function main() {
     );
   }
 
-  console.log(`Profiling app with ${MODEL}…`);
-  const profile = await profileApp(evidence);
-  console.log(`  ${profile.name}: ${profile.purpose}`);
-  console.log(`  stack: ${[...profile.languages, ...profile.frameworks].join(', ') || 'n/a'}`);
-  console.log(`  personal data: ${profile.handles_personal_data}  |  AI: ${profile.uses_ai}`);
-
-  let assessments = [];
-  for (let pass = 1; pass <= MAX_PASSES; pass++) {
-    console.log(`\n===== PASS ${pass}/${MAX_PASSES} =====`);
-    const passEvidence = renderEvidence(scan(ROOT)); // re-scan so new docs count
-    assessments = [];
-    for (const std of standards) {
-      process.stdout.write(`  assessing ${std.id}… `);
-      const { controls } = await assessStandard(std, profile, passEvidence);
-      assessments.push({ id: std.id, title: std.title, controls });
-      const ok = controls.filter((c) => c.status === 'compliant').length;
-      console.log(`${ok}/${controls.length} compliant`);
-    }
-
-    const summary = summarize(assessments);
-    console.log(`  → overall ${summary.score}/100 (${summary.partial} partial, ${summary.missing} missing)`);
-
-    if (summary.fullyCompliant || REPORT_ONLY) break;
-    if (pass === MAX_PASSES) break;
-
-    // Remediate: write docs for every standard that has gaps.
-    for (let i = 0; i < standards.length; i++) {
-      const std = standards[i];
-      const gaps = assessments[i].controls.filter(
-        (c) => c.status !== 'compliant' && c.remediation && c.remediation.path
-      );
-      if (!gaps.length) continue;
-      process.stdout.write(`  writing ${gaps.length} doc(s) for ${std.id}… `);
-      const { files } = await remediateStandard(std, profile, gaps, passEvidence);
-      const results = files.map((f) => `${writeDoc(ROOT, f.path, f.content)} ${f.path}`);
-      console.log(results.join(', '));
-    }
-  }
-
-  const summary = summarize(assessments);
-  writeReports(ROOT, assessments, profile, summary);
+  console.log(`Assessing with ${MODEL} (max ${MAX_PASSES} pass${MAX_PASSES > 1 ? 'es' : ''})…`);
+  const { summary } = await runAgent({
+    root: ROOT,
+    standards,
+    reportOnly: REPORT_ONLY,
+    maxPasses: MAX_PASSES,
+  });
 
   console.log(`\n=====================================`);
   console.log(`Documentation coverage: ${summary.score}/100 — ${summary.compliant} covered, ${summary.partial} partial, ${summary.missing} missing`);
