@@ -1,4 +1,4 @@
-# ISOCheck tooling
+# ISOCheck Agent
 
 > ⚠️ **Not certification.** These tools produce an automated **self-assessment of
 > documentation coverage** against ISO/IEC checklists. They are not an audit and do
